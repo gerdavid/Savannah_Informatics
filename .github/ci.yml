@@ -1,0 +1,29 @@
+
+
+// .github/workflows/ci.yml
+
+name: CI
+
+on: 
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.19
+    - name: Test
+      run: go test -v -coverprofile=coverage.out ./...
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with: 
+        token: ${{ secrets.CODECOV_TOKEN }}
+

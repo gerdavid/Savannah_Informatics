@@ -5,16 +5,23 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/AndroidStudyOpenSource/africastalking-go/sms"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
 )
 
+const (
+	username = "enter yours"                                                          //Your Africa's Talking Username
+	apiKey   = "enter yours" //Production or Sandbox API Key
+	env      = "Sandbox"                                                          // Choose either Sandbox or Production
+)
+
 // Customer model
 type Customer struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-	Code string `json:"code"`
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Phone string `json:"phone"`
 }
 
 // Order model
@@ -31,7 +38,7 @@ var db *sql.DB
 
 func init() {
 	var err error
-	db, err = sql.Open("postgres", "user=postgres dbname=savannah password=davinski sslmode=disable")
+	db, err = sql.Open("postgres", "user=yours dbname=yours password=yours sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,7 +50,7 @@ func createCustomer(c echo.Context) error {
 	if err := c.Bind(customer); err != nil {
 		return err
 	}
-	_, err := db.Exec("INSERT INTO customers (name, code) VALUES ($1, $2)", customer.Name, customer.Code)
+	_, err := db.Exec("INSERT INTO customers (name, phone) VALUES ($1, $2)", customer.Name, customer.Phone)
 	if err != nil {
 		return err
 	}
@@ -60,6 +67,7 @@ func createOrder(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	getPhoneByCustomerID(db, order.CustomerID)
 	return c.JSON(http.StatusCreated, order)
 }
 
@@ -83,16 +91,49 @@ func KeyAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+// Function to fetch the phone value from the customers table based on customer_id
+func getPhoneByCustomerID(db *sql.DB, customerID int) (string, error) {
+	// Query to fetch the phone value from the customers table based on customer_id
+	query := "SELECT phone FROM customers WHERE id = $1"
+
+	// Execute the query
+	row := db.QueryRow(query, customerID)
+
+	// Initialize a variable to store the phone value
+	var phone string
+
+	// Scan the result into the phone variable
+	err := row.Scan(&phone)
+	if err != nil {
+		// Handle the error
+		log.Println("Error fetching phone:", err)
+		return "", err
+	}
+	log.Println(phone)
+	sendSms(phone)
+	return phone, nil
+}
+
+func sendSms(phone string) {
+	//Call the Gateway, and pass the constants here!
+	smsService := sms.NewService(username, apiKey, env)
+
+	//Send SMS - REPLACE Recipient and Message with REAL Values
+	_, err := smsService.Send(phone, "order received", "") //Leave blank, "", if you don't have one
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("SMS Sent")
+	//fmt.Println(smsResponse)
+}
+
 func main() {
 	e := echo.New()
 
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	// e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-	// 	// Implement your key authentication logic here
-	// 	return key == os.Getenv("API_KEY"), nil
-	// }))
+	
 
 	// Routes
 	e.POST("/customers", createCustomer)

@@ -3,6 +3,7 @@ module savannah_informatics
 go 1.21.4
 
 require (
+	github.com/AndroidStudyOpenSource/africastalking-go v0.0.0-20200515172509-94a151ad63fe
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/lib/pq v1.10.9
 )
